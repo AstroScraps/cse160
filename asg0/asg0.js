@@ -71,6 +71,16 @@ function angleBetween(v1, v2)
   return angle;
 }
 
+// area
+function areaTriangle(v1, v2)
+{
+  let crossProduct = Vector3.cross(v1, v2);
+  let crossProductMagnitude = crossProduct.magnitude();
+  // cut in half
+  let area = 0.5 * crossProductMagnitude;
+  return area;
+}
+
 // operation function
 function handleDrawOperationEvent()
 {
@@ -136,5 +146,9 @@ function handleDrawOperationEvent()
   if(op == "angle_between")
   {
     console.log("Angle: " + angleBetween(v1, v2));
+  }
+  if(op == "area")
+  {
+    console.log("Area of the triangle: " + areaTriangle(v1, v2));
   }
 }
