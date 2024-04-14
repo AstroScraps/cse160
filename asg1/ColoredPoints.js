@@ -56,6 +56,19 @@ function connectVariablesToGLSL() {
   }
 }
 
+let g_selectedColor=[1.0, 1.0, 1.0, 1.0];
+
+// set up actions for the HTML UI elements
+function addActionsForHTMLUI() {
+  // button events (shape type)
+  document.getElementById('green').onclick = function() { g_selectedColor = [0.0, 1.0, 0.0, 1.0]; };
+  document.getElementById('red').onclick = function() { g_selectedColor = [1.0, 0.0, 0.0, 1.0]; };
+  // slider events
+  document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
+  document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
+  document.getElementById('blueSlide').addEventListener('mouseup', function() { g_selectedColor[2] = this.value/100; });
+}
+
 function main() {
 
   // set up canvas and GL variables
@@ -85,14 +98,18 @@ function click(ev) {
 
   // Store the coordinates to g_points array
   g_points.push([x, y]);
-  // Store the coordinates to g_points array
-  if (x >= 0.0 && y >= 0.0) {      // First quadrant
-    g_colors.push([1.0, 0.0, 0.0, 1.0]);  // Red
-  } else if (x < 0.0 && y < 0.0) { // Third quadrant
-    g_colors.push([0.0, 1.0, 0.0, 1.0]);  // Green
-  } else {                         // Others
-    g_colors.push([1.0, 1.0, 1.0, 1.0]);  // White
-  }
+
+  // store the color to a g_colors array
+  g_colors.push(g_selectedColor.slice());
+
+  // // Store the color to a g_colors array
+  // if (x >= 0.0 && y >= 0.0) {      // First quadrant
+  //   g_colors.push([1.0, 0.0, 0.0, 1.0]);  // Red
+  // } else if (x < 0.0 && y < 0.0) { // Third quadrant
+  //   g_colors.push([0.0, 1.0, 0.0, 1.0]);  // Green
+  // } else {                         // Others
+  //   g_colors.push([1.0, 1.0, 1.0, 1.0]);  // White
+  // }
 
   // draw all shapes that should be on the canvas
   renderAllShapes();
