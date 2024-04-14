@@ -72,6 +72,8 @@ function addActionsForHTMLUI() {
   // button events (shape type)
   document.getElementById('green').onclick = function() { g_selectedColor = [0.0, 1.0, 0.0, 1.0]; };
   document.getElementById('red').onclick = function() { g_selectedColor = [1.0, 0.0, 0.0, 1.0]; };
+  // button events (clear)
+  document.getElementById('clearbutton').onclick = function() { g_shapesList = []; renderAllShapes(); };
   // color slider events
   document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
   document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
@@ -103,10 +105,6 @@ function main() {
 
 var g_shapesList = [];
 
-// var g_points = [];  // The array for the position of a mouse press
-// var g_colors = [];  // The array to store the color of a point
-// var g_sizes = []; // the array to store the size of a point
-
 function click(ev) {
   // extract event coords and convert to webGL coords
   let [x, y] = convertCoordinatesToGL(ev);
@@ -117,24 +115,6 @@ function click(ev) {
   point.color = g_selectedColor.slice();
   point.size = g_selectedSize;
   g_shapesList.push(point);
-
-  // // Store the coordinates to g_points array
-  // [g_points.push([x, y])];
-
-  // // store the color to a g_colors array
-  // g_colors.push(g_selectedColor.slice());
-
-  // // store the size to a g_sizes array
-  // g_sizes.push(g_selectedSize);
-
-  // // Store the color to a g_colors array
-  // if (x >= 0.0 && y >= 0.0) {      // First quadrant
-  //   g_colors.push([1.0, 0.0, 0.0, 1.0]);  // Red
-  // } else if (x < 0.0 && y < 0.0) { // Third quadrant
-  //   g_colors.push([0.0, 1.0, 0.0, 1.0]);  // Green
-  // } else {                         // Others
-  //   g_colors.push([1.0, 1.0, 1.0, 1.0]);  // White
-  // }
 
   // draw all shapes that should be on the canvas
   renderAllShapes();
