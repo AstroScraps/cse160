@@ -64,17 +64,25 @@ function connectVariablesToGLSL() {
   }
 }
 
+// consts
+const POINT = 0;
+const TRIANGLE = 1;
+
 // globals related to UI elements
 let g_selectedColor=[1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
+let g_selectedType = POINT;
 
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
-  // button events (shape type)
+  // prob going to delete these?
   document.getElementById('green').onclick = function() { g_selectedColor = [0.0, 1.0, 0.0, 1.0]; };
   document.getElementById('red').onclick = function() { g_selectedColor = [1.0, 0.0, 0.0, 1.0]; };
   // button events (clear)
-  document.getElementById('clearbutton').onclick = function() { g_shapesList = []; renderAllShapes(); };
+  document.getElementById('clearButton').onclick = function() { g_shapesList = []; renderAllShapes(); };
+  // button events (shape type)
+  document.getElementById('pointButton').onclick = function() { g_selectedType = POINT };
+  document.getElementById('triButton').onclick = function() { g_selectedType = TRIANGLE };
   // color slider events
   document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
   document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
@@ -111,8 +119,16 @@ function click(ev) {
   // extract event coords and convert to webGL coords
   let [x, y] = convertCoordinatesToGL(ev);
 
-  // new point object
-  let point = new Point();
+  // brush type selection
+  let point;
+  if (g_selectedType == POINT)
+  {
+    point = new Point();
+  }
+  else if (g_selectedType == TRIANGLE)
+  {
+    point = new Triangle();
+  }
   point.position = [x, y];
   point.color = g_selectedColor.slice();
   point.size = g_selectedSize;
