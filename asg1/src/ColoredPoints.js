@@ -74,6 +74,7 @@ let g_selectedColor=[1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
 let g_selectedType = POINT;
 let g_selectedSegments = 10
+let g_drunkMode = false;
 
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
@@ -83,6 +84,24 @@ function addActionsForHTMLUI() {
   document.getElementById('pointButton').onclick = function() { g_selectedType = POINT };
   document.getElementById('triButton').onclick = function() { g_selectedType = TRIANGLE };
   document.getElementById('circleButton').onclick = function() { g_selectedType = CIRCLE };
+  // DRUNK DRIVER BY NIGHT
+  document.getElementById('drunkToggle').onclick = function() {
+    g_drunkMode = !g_drunkMode;
+    // check if on or off
+    // for cursor
+    var truckAudio = document.getElementById("truckin");
+    if(g_drunkMode == true)
+    {
+      document.body.style.cursor = "url('TRUCK.png'), auto";
+      truckAudio.play();
+    }
+    else
+    {
+      document.body.style.cursor = "auto";
+      truckAudio.pause();
+      truckAudio.currentTime = 0;
+    }
+  };
   // color slider events
   document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
   document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
@@ -135,6 +154,14 @@ function click(ev) {
     point = new Circle();
   }
   point.position = [x, y];
+  // I WONT STOP TRUCKIN
+  if(g_drunkMode == true)
+  {
+    // BECAUSE IM ON
+    let x_offset = (Math.floor(Math.random() * (4 - (-6) + 1)) + (-6)) / 100;
+    let y_offset = (Math.floor(Math.random() * (5 - (-7) + 1)) + (-7)) / 100;
+    point.position = [x + x_offset, -y + y_offset];
+  }
   point.color = g_selectedColor.slice();
   point.size = g_selectedSize;
   // circle specific
