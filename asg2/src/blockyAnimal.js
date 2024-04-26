@@ -2,11 +2,11 @@
 // Vertex shader program
 var VSHADER_SOURCE = `
   attribute vec4 a_Position;
-  uniform float u_Size;
+  uniform mat4 u_ModelMatrix;
+  uniform mat4 u_GlobalRotateMatrix;
   void main()
   {
-    gl_Position = a_Position;
-    gl_PointSize = u_Size;
+    gl_Position = u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
   }`
 
 // Fragment shader program
@@ -57,11 +57,24 @@ function connectVariablesToGLSL() {
     console.log('Failed to get the storage location of u_FragColor');
     return;
   }
-  u_Size = gl.getUniformLocation(gl.program, 'u_Size');
-  if (!u_Size) {
-    console.log('Failed to get the sotrage location of u_Size');
+
+  // get the storage location of u_ModelMatrix
+  u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
+  if (!u_ModelMatrix) {
+    console.log('Failed to get the sotrage location of u_ModelMatrix');
     return;
   }
+
+  // get the storage location of u_GlobalRotateMatrix
+  u_GlobalRotateMatrix = gl.getUniformLocation(gl.program, 'u_GlobalRotateMatrix');
+  if (!u_GlobalRotateMatrix) {
+    console.log('Failed to get the sotrage location of u_GlobalRotateMatrix');
+    return;
+  }
+  
+  // set initial value for this matrix to identity
+  var identityM = new Matrix4();
+  gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
 }
 
 // consts
@@ -73,8 +86,7 @@ const CIRCLE = 2;
 let g_selectedColor=[1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
 let g_selectedType = POINT;
-let g_selectedSegments = 10
-let g_drunkMode = false;
+let g_globalAngle = 0;
 
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
@@ -84,31 +96,12 @@ function addActionsForHTMLUI() {
   document.getElementById('pointButton').onclick = function() { g_selectedType = POINT };
   document.getElementById('triButton').onclick = function() { g_selectedType = TRIANGLE };
   document.getElementById('circleButton').onclick = function() { g_selectedType = CIRCLE };
-  // DRUNK DRIVER BY NIGHT
-  document.getElementById('drunkToggle').onclick = function() {
-    g_drunkMode = !g_drunkMode;
-    // check if on or off
-    // for cursor
-    var truckAudio = document.getElementById("truckin");
-    if(g_drunkMode == true)
-    {
-      document.body.style.cursor = "url('TRUCK.png'), auto";
-      truckAudio.play();
-    }
-    else
-    {
-      document.body.style.cursor = "auto";
-      truckAudio.pause();
-      truckAudio.currentTime = 0;
-    }
-  };
   // color slider events
   document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
   document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
   document.getElementById('blueSlide').addEventListener('mouseup', function() { g_selectedColor[2] = this.value/100; });
   // size slider events
-  document.getElementById('sizeSlide').addEventListener('mouseup', function() { g_selectedSize = this.value; });
-  document.getElementById('circleSegSlide').addEventListener('mouseup', function() { g_selectedSegments = this.value; });
+  document.getElementById('angleSlide').addEventListener('mousemove', function() { g_globalAngle = this.value; renderAllShapes(); });
 }
 
 function main() {
@@ -129,8 +122,8 @@ function main() {
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-  // Clear <canvas>
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  // render
+  renderAllShapes();
 }
 
 var g_shapesList = [];
@@ -154,14 +147,6 @@ function click(ev) {
     point = new Circle();
   }
   point.position = [x, y];
-  // I WONT STOP TRUCKIN
-  if(g_drunkMode == true)
-  {
-    // BECAUSE IM ON
-    let x_offset = (Math.floor(Math.random() * (4 - (-6) + 1)) + (-6)) / 100;
-    let y_offset = (Math.floor(Math.random() * (5 - (-7) + 1)) + (-7)) / 100;
-    point.position = [x + x_offset, -y + y_offset];
-  }
   point.color = g_selectedColor.slice();
   point.size = g_selectedSize;
   // circle specific
@@ -187,11 +172,25 @@ function convertCoordinatesToGL(ev) {
 }
 
 function renderAllShapes() {
+  // pass the matrix to u_ModelMatrix attribute
+  var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0);
+  gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
+
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  var len = g_shapesList.length;
-  for(var i = 0; i < len; i++) {
-    g_shapesList[i].render();
-  }
+  // draw testing (2.1)
+  drawTriangle3D( [-1.0, 0.0, 0.0,  -0.5, -1.0, 0.0,  0.0, 0.0, 0.0] )
+  var body = new Cube();
+  body.color = [1.0, 0.0, 0.0, 1.0];
+  body.matrix.translate(-0.25, -.5, 0.0);
+  body.matrix.scale(0.5, 1, 0.5);
+  body.render();
+
+  var leftArm = new Cube();
+  leftArm.color = [1,1,0,1];
+  leftArm.matrix.translate(0.7, 0, 0);
+  leftArm.matrix.rotate(45, 0, 0, 1);
+  leftArm.matrix.scale(0.25, 0.7, 0.5);
+  leftArm.render();
 }
