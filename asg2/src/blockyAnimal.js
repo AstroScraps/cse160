@@ -23,6 +23,7 @@ let gl;
 let a_Position;
 let u_FragColor;
 let u_Size;
+let u_GlobalRotateMatrix;
 
 function setupWebGL() {
   // Retrieve <canvas> element
@@ -35,6 +36,8 @@ function setupWebGL() {
     console.log('Failed to get the rendering context for WebGL');
     return;
   }
+
+  gl.enable(gl.DEPTH_TEST);
 }
 
 function connectVariablesToGLSL() {
@@ -68,7 +71,7 @@ function connectVariablesToGLSL() {
   // get the storage location of u_GlobalRotateMatrix
   u_GlobalRotateMatrix = gl.getUniformLocation(gl.program, 'u_GlobalRotateMatrix');
   if (!u_GlobalRotateMatrix) {
-    console.log('Failed to get the sotrage location of u_GlobalRotateMatrix');
+    console.log('Failed to get the storage location of u_GlobalRotateMatrix');
     return;
   }
   
@@ -86,22 +89,21 @@ const CIRCLE = 2;
 let g_selectedColor=[1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
 let g_selectedType = POINT;
+// globals for Assignment 2
 let g_globalAngle = 0;
+let g_yellowAngle = 0;
+let g_magentaAngle = 0;
+let g_yellowAnimation = false;
 
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
-  // button events (clear)
-  document.getElementById('clearButton').onclick = function() { g_shapesList = []; renderAllShapes(); };
-  // button events (shape type)
-  document.getElementById('pointButton').onclick = function() { g_selectedType = POINT };
-  document.getElementById('triButton').onclick = function() { g_selectedType = TRIANGLE };
-  document.getElementById('circleButton').onclick = function() { g_selectedType = CIRCLE };
-  // color slider events
-  document.getElementById('redSlide').addEventListener('mouseup', function() { g_selectedColor[0] = this.value/100; });
-  document.getElementById('greenSlide').addEventListener('mouseup', function() { g_selectedColor[1] = this.value/100; });
-  document.getElementById('blueSlide').addEventListener('mouseup', function() { g_selectedColor[2] = this.value/100; });
-  // size slider events
+  // button events
+  document.getElementById('animationYellowOnButton').onclick = function() { g_yellowAnimation = true };
+  document.getElementById('animationYellowOffButton').onclick = function() { g_yellowAnimation = false };
+
+  // 3D slider events
   document.getElementById('angleSlide').addEventListener('mousemove', function() { g_globalAngle = this.value; renderAllShapes(); });
+  document.getElementById('yellowSlide').addEventListener('mousemove', function() { g_yellowAngle = this.value; renderAllShapes(); });
 }
 
 function main() {
@@ -115,60 +117,36 @@ function main() {
   // set up actions for the HTML UI elements
   addActionsForHTMLUI();
 
-  // Register function (event handler) to be called on a mouse press
-  canvas.onmousedown = click;
-  canvas.onmousemove = function(ev) { if(ev.buttons == 1) { click(ev) } };
-
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
   // render
-  renderAllShapes();
+  requestAnimationFrame(tick);
 }
 
-var g_shapesList = [];
-
-function click(ev) {
-  // extract event coords and convert to webGL coords
-  let [x, y] = convertCoordinatesToGL(ev);
-
-  // brush type selection
-  let point;
-  if (g_selectedType == POINT)
-  {
-    point = new Point();
-  }
-  else if (g_selectedType == TRIANGLE)
-  {
-    point = new Triangle();
-  }
-  else if (g_selectedType == CIRCLE)
-  {
-    point = new Circle();
-  }
-  point.position = [x, y];
-  point.color = g_selectedColor.slice();
-  point.size = g_selectedSize;
-  // circle specific
-  if (g_selectedType == CIRCLE)
-  {
-    point.segments = g_selectedSegments;
-  }
-  g_shapesList.push(point);
-
-  // draw all shapes that should be on the canvas
-  renderAllShapes();
-}
-
-function convertCoordinatesToGL(ev) {
-  var x = ev.clientX; // x coordinate of a mouse pointer
-  var y = ev.clientY; // y coordinate of a mouse pointer
-  var rect = ev.target.getBoundingClientRect();
-
-  x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
-  y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
+var g_startTime = performance.now() / 1000;
+var g_seconds = performance.now() / 1000 - g_startTime;
+// tick
+function tick() {
+  // update current time
+  g_seconds = performance.now() / 1000 - g_startTime;
+  console.log(performance.now);
   
-  return ([x, y]);
+  // update animation angles
+  updateAnimationAngles();
+
+  // action
+  renderAllShapes();
+  
+  // recurse..? sorta
+  requestAnimationFrame(tick);
+}
+
+// update the angles of everything that is currently animated
+function updateAnimationAngles() {
+  if(g_yellowAnimation == true) {
+    g_yellowAngle = 45 * Math.sin(g_seconds);
+  }
 }
 
 function renderAllShapes() {
@@ -178,19 +156,36 @@ function renderAllShapes() {
 
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
+  // clear... other buffer?
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
 
   // draw testing (2.1)
-  drawTriangle3D( [-1.0, 0.0, 0.0,  -0.5, -1.0, 0.0,  0.0, 0.0, 0.0] )
+  // drawTriangle3D( [-1.0, 0.0, 0.0,  -0.5, -1.0, 0.0,  0.0, 0.0, 0.0] );
   var body = new Cube();
   body.color = [1.0, 0.0, 0.0, 1.0];
-  body.matrix.translate(-0.25, -.5, 0.0);
-  body.matrix.scale(0.5, 1, 0.5);
+  body.matrix.translate(-.25, -.75, 0.0);
+  body.matrix.scale(.5, .3, .5);
   body.render();
 
-  var leftArm = new Cube();
-  leftArm.color = [1,1,0,1];
-  leftArm.matrix.translate(0.7, 0, 0);
-  leftArm.matrix.rotate(45, 0, 0, 1);
-  leftArm.matrix.scale(0.25, 0.7, 0.5);
-  leftArm.render();
+  var yellow = new Cube();
+  yellow.color = [1,1,0,1];
+  yellow.matrix.translate(0, -.5, 0, 0);
+  yellow.matrix.rotate(-5, 1, 0, 0);
+  // animation
+  yellow.matrix.rotate(g_yellowAngle, 0, 0, 1);
+  // update matrix for attached limbs
+  var yellowCoordinatesMat = new Matrix4(yellow.matrix);
+  yellow.matrix.scale(.25, .7, .5);
+  yellow.matrix.translate(-.5, 0, 0);
+  yellow.render();
+
+  var box = new Cube();
+  box.color = [1, 0, 1, 1];
+  box.matrix = yellowCoordinatesMat;
+  box.matrix.translate(0, .65, 0);
+  box.matrix.rotate(0, 1, 0, 0);
+  box.matrix.scale(.3, .3, .3);
+  box.matrix.translate(-.5, 0, -0.001);
+  box.render();
 }
