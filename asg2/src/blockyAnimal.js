@@ -74,7 +74,7 @@ function connectVariablesToGLSL() {
     console.log('Failed to get the storage location of u_GlobalRotateMatrix');
     return;
   }
-  
+
   // set initial value for this matrix to identity
   var identityM = new Matrix4();
   gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
@@ -86,24 +86,65 @@ const TRIANGLE = 1;
 const CIRCLE = 2;
 
 // globals related to UI elements
-let g_selectedColor=[1.0, 1.0, 1.0, 1.0];
+let g_selectedColor = [1.0, 1.0, 1.0, 1.0];
 let g_selectedSize = 5;
 let g_selectedType = POINT;
 // globals for Assignment 2
-let g_globalAngle = 0;
+// camera move
+let g_globalAngleY = 0;
+let g_globalAngleX = 0;
+let g_shiftKeyActivated = true;
+let g_lastX = null;
+let g_lastY = null;
+let sliderX;
+let sliderY;
+// limb stuff
 let g_yellowAngle = 0;
-let g_magentaAngle = 0;
 let g_yellowAnimation = false;
+let g_earAnimation = false;
+let g_middleAnimation = false;
+let g_earRotate = 0;
+let g_middleRotate = 0;
+let g_hatSpin = 0;
 
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
   // button events
-  document.getElementById('animationYellowOnButton').onclick = function() { g_yellowAnimation = true };
-  document.getElementById('animationYellowOffButton').onclick = function() { g_yellowAnimation = false };
+  document.getElementById('animationYellowOnButton').onclick = function () { g_yellowAnimation = true; g_earAnimation = true; g_middleAnimation = true; };
+  document.getElementById('animationYellowOffButton').onclick = function () { g_yellowAnimation = false; g_earAnimation = false; g_middleAnimation = false; };
 
   // 3D slider events
-  document.getElementById('angleSlide').addEventListener('mousemove', function() { g_globalAngle = this.value; renderAllShapes(); });
-  document.getElementById('yellowSlide').addEventListener('mousemove', function() { g_yellowAngle = this.value; renderAllShapes(); });
+  document.getElementById('angleSlide').addEventListener('mousemove', function () { g_globalAngleY = this.value; renderAllShapes(); });
+  document.getElementById('neckSlide').addEventListener('mousemove', function () { g_yellowAngle = this.value; renderAllShapes(); });
+  document.getElementById('bodySlide').addEventListener('mousemove', function () { g_middleRotate = this.value; renderAllShapes(); });
+
+  // credit for camera turn from 'Stanley the Flying Elephant - Nicholas Eastmond' (from the hall of fame)
+
+  canvas.onmousedown = (ev) => {
+    let [x, y] = convertCoordinatesToGL(ev);
+    g_lastX = x;
+    g_lastY = y;
+    if (ev.shiftKey) {
+      g_shiftKeyActivated = !g_shiftKeyActivated;
+      if (g_shiftKeyActivated) {
+        // shift key
+      } else {
+        // no shift key
+      }
+    }
+  }
+  canvas.onmousemove = function (ev) {
+    let [x, y] = convertCoordinatesToGL(ev);
+    if (ev.buttons == 1) {
+      g_globalAngleY -= (x - g_lastX) * 50;
+      g_globalAngleX -= (y - g_lastY) * 50;
+      g_lastX = x;
+      g_lastY = y;
+    } else {
+      g_lastX = x;
+      g_lastY = y;
+    }
+  }
 }
 
 function main() {
@@ -125,33 +166,60 @@ function main() {
 }
 
 var g_startTime = performance.now() / 1000;
-var g_seconds = performance.now() / 1000 - g_startTime;
 // tick
 function tick() {
   // update current time
-  g_seconds = performance.now() / 1000 - g_startTime;
+  g_seconds = performance.now() / 500 - g_startTime;
   console.log(performance.now);
-  
+
   // update animation angles
   updateAnimationAngles();
 
   // action
   renderAllShapes();
-  
+
   // recurse..? sorta
   requestAnimationFrame(tick);
 }
 
 // update the angles of everything that is currently animated
 function updateAnimationAngles() {
-  if(g_yellowAnimation == true) {
-    g_yellowAngle = 45 * Math.sin(g_seconds);
+  // neck
+  if (g_yellowAnimation == true) {
+    g_yellowAngle = 16 * Math.sin(g_seconds);
+  }
+  // ears
+  if (g_earAnimation == true) {
+    g_earRotate = 6 * Math.sin(g_seconds) - 20;
+  }
+  if (g_middleAnimation == true) {
+    g_middleRotate = 5 * Math.sin(g_seconds);
+  }
+  if (!g_shiftKeyActivated) {
+    g_hatSpin = 90 * Math.sin(g_seconds);
   }
 }
 
+// canvas stuff
+function convertCoordinatesToGL(ev) {
+  var x = ev.clientX; // x coordinate of a mouse pointer
+  var y = ev.clientY; // y coordinate of a mouse pointer
+  var rect = ev.target.getBoundingClientRect();
+
+  x = ((x - rect.left) - canvas.width / 2) / (canvas.width / 2);
+  y = (canvas.height / 2 - (y - rect.top)) / (canvas.height / 2);
+
+  return ([x, y]);
+}
+
 function renderAllShapes() {
+  // track performance
+  var renderStart = performance.now();
+  
   // pass the matrix to u_ModelMatrix attribute
-  var globalRotMat = new Matrix4().rotate(g_globalAngle, 0, 1, 0);
+  var globalRotMat = new Matrix4();
+  globalRotMat.rotate(g_globalAngleY, 0, 1, 0);
+  globalRotMat.rotate(-g_globalAngleX, 1, 0, 0);
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
 
   // Clear <canvas>
@@ -160,32 +228,112 @@ function renderAllShapes() {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
-  // draw testing (2.1)
-  // drawTriangle3D( [-1.0, 0.0, 0.0,  -0.5, -1.0, 0.0,  0.0, 0.0, 0.0] );
-  var body = new Cube();
-  body.color = [1.0, 0.0, 0.0, 1.0];
-  body.matrix.translate(-.25, -.75, 0.0);
-  body.matrix.scale(.5, .3, .5);
-  body.render();
-
-  var yellow = new Cube();
-  yellow.color = [1,1,0,1];
-  yellow.matrix.translate(0, -.5, 0, 0);
-  yellow.matrix.rotate(-5, 1, 0, 0);
+  // draw the slug
+  // bottom
+  var bottomseg = new Cube();
+  bottomseg.color = [1.0, 1.0, 0.0, 1.0];
+  bottomseg.matrix.translate(-.15, -.75, 0.0);
+  var bottomCoordinatesMat = new Matrix4(bottomseg.matrix);
+  bottomseg.matrix.translate(-.02, 0, 0);
+  bottomseg.matrix.scale(.35, .35, .5);
+  bottomseg.render();
+  //neck
+  var neck = new Cube();
+  neck.color = [1, 1, 0, 1];
+  neck.matrix.translate(0, -.5, 0, 0);
+  neck.matrix.rotate(-5, 1, 0, 0);
   // animation
-  yellow.matrix.rotate(g_yellowAngle, 0, 0, 1);
+  neck.matrix.rotate(g_yellowAngle, 1, 0, 0);
   // update matrix for attached limbs
-  var yellowCoordinatesMat = new Matrix4(yellow.matrix);
-  yellow.matrix.scale(.25, .7, .5);
-  yellow.matrix.translate(-.5, 0, 0);
-  yellow.render();
+  var neckCoordinatesMat = new Matrix4(neck.matrix);
+  neck.matrix.scale(.25, .4, .3);
+  neck.matrix.translate(-.5, 0, 0);
+  neck.render();
+  // head
+  var head = new Cube();
+  head.color = [.9, .9, 0, 1];
+  head.matrix = neckCoordinatesMat;
+  head.matrix.translate(0, .65, 0);
+  var headCoordinatesMat = new Matrix4(head.matrix);
+  head.matrix.rotate(0, 1, 0, 0);
+  head.matrix.scale(.3, .3, .32);
+  head.matrix.translate(-.5, -1.5, -0.001);
+  head.render();
+  // nose
+  var nose = new Cube();
+  nose.color = [.8, .8, 0, 1];
+  nose.matrix = new Matrix4(headCoordinatesMat);
+  nose.matrix.rotate(-15, 1, 0, 0)
+  nose.matrix.scale(.05, .05, .1);
+  nose.matrix.translate(-.5, -7.5, -1.5)
+  nose.render();
+  // ear?? 1
+  var ear1 = new Cube();
+  ear1.color = [.8, .8, 0, 1];
+  ear1.matrix = new Matrix4(headCoordinatesMat);
+  ear1.matrix.rotate(g_earRotate, 1, 0, 0);
+  ear1.matrix.rotate(-30, 1, 0, 0);
+  ear1.matrix.translate(.05, -.3, -0.08);
+  ear1.matrix.scale(.05, .3, 0.05);
+  ear1.render();
+  // ear?? 2
+  var ear2 = new Cube();
+  ear2.color = [.8, .8, 0, 1];
+  ear2.matrix = new Matrix4(headCoordinatesMat);
+  ear2.matrix.rotate(g_earRotate, 1, 0, 0);
+  ear2.matrix.rotate(-30, 1, 0, 0);
+  ear2.matrix.translate(-.1, -.3, -0.08);
+  ear2.matrix.scale(.05, .3, 0.05);
+  ear2.render();
+  // segment middle
+  var middle = new Cube();
+  middle.color = [0.9, 0.9, 0, 1];
+  middle.matrix = bottomCoordinatesMat;
+  middle.matrix.rotate(g_middleRotate, 0, 1, 0);
+  middle.matrix.scale(.2, .2, .35);
+  middle.matrix.translate(.78, 0, 1);
+  middle.matrix.rotate(45, 0, 0, 1);
+  var middleCoordinatesMat = new Matrix4(middle.matrix);
+  middle.render();
+  // segment tail
+  var tail = new Cube();
+  tail.matrix = middleCoordinatesMat;
+  tail.color = [1, 1, 0, 1];
+  tail.matrix.translate(-0.09, -0.1, 1);
+  var tailCoordinatesMat = new Matrix4(tail.matrix);
+  tail.matrix.scale(1.3, 1.3, 1.3);
+  tail.render();
+  // segment tailend
+  var tailend = new Cube();
+  tailend.matrix = tailCoordinatesMat;
+  tailend.color = [.85, .85, 0, 1];
+  tailend.matrix.translate(0.3, 0.3, 1.1);
+  tailend.matrix.scale(0.8, 0.8, 0.3);
+  middle.matrix.rotate(-45, 0, 1, 0);
+  tailend.render();
 
-  var box = new Cube();
-  box.color = [1, 0, 1, 1];
-  box.matrix = yellowCoordinatesMat;
-  box.matrix.translate(0, .65, 0);
-  box.matrix.rotate(0, 1, 0, 0);
-  box.matrix.scale(.3, .3, .3);
-  box.matrix.translate(-.5, 0, -0.001);
-  box.render();
+  // hat
+  var hat = new Pyramid();
+  hat.color = [1, 0, 0, 1];
+  hat.matrix = new Matrix4(headCoordinatesMat);
+  hat.matrix.translate(0, -.15, .15);
+  hat.matrix.scale(.3, .3, .3);
+  hat.matrix.rotate(g_hatSpin, 0, 1, 0);
+  hat.matrix.translate(-.5,0,-.38)
+  hat.render();
+
+  // track performance (end)
+  var duration = performance.now() - renderStart;
+  sendTextToHTML("fps: " + Math.floor(10000/duration), "fps");
+}
+
+function sendTextToHTML(text, ID){
+  var element = document.getElementById(ID);
+  // check validity
+  if (!element) {
+    console.log("Failed to get " + ID + "from HTML");
+    return;
+  }
+  // set text
+  element.innerHTML = text;
 }
