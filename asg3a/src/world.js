@@ -19,11 +19,11 @@ var FSHADER_SOURCE = `
   precision mediump float;
   varying vec2 v_UV;
   uniform vec4 u_FragColor;
-  //uniform sampler2D u_Sampler0;
+  uniform sampler2D u_Sampler0;
   void main() {
     gl_FragColor = u_FragColor;
     gl_FragColor = vec4(v_UV, 1.0, 1.0);
-    //gl_FragColor = texture2D(u_Sampler0, v_UV);
+    gl_FragColor = texture2D(u_Sampler0, v_UV);
   }`
 
 // global variables
@@ -110,6 +110,13 @@ function connectVariablesToGLSL() {
     return;
   }
 
+  // get the storage location of u_Sampler0
+  u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
+  if (!u_Sampler0) {
+    console.log('Failed to get the storage location of u_Sampler0');
+    return false;
+  }
+
   // set initial value for this matrix to identity
   var identityM = new Matrix4();
   gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
@@ -189,6 +196,50 @@ function addActionsForHTMLUI() {
   }
 }
 
+// initTextures
+function initTextures(gl, n) {
+
+  var image0 = new Image(); // create the image object
+  if (!image0) {
+    console.log('Failed to create the image object');
+    return false;
+  }
+  
+  // register the event handler to be called on loading an image
+  image0.onload = function(){ sendTextureToTEXTURE0(image0); };
+  // tell the browser to load an image
+  image0.src = '../resources/obama.png';
+
+  return true;
+}
+
+// sendTextureToGLSL
+function sendTextureToTEXTURE0(image) {
+  var texture = gl.createTexture(); // create a texture object
+  if (!texture) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // flip the image's y axis
+  // enable texture unit0
+  gl.activeTexture(gl.TEXTURE0);
+  // bind the texture object to the target
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // set the texture parameters
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  // set the texture image
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+
+  // set the texture unit 0 to the sampler
+  gl.uniform1i(u_Sampler0, 0);
+
+  //gl.clear(gl.COLOR_BUFFER_BIT);   // Clear <canvas>
+
+  //gl.drawArrays(gl.TRIANGLE_STRIP, 0, n); // Draw the rectangle
+  console.log("finished loadTexture");
+}
+
 function main() {
 
   // set up canvas and GL variables
@@ -199,6 +250,9 @@ function main() {
 
   // set up actions for the HTML UI elements
   addActionsForHTMLUI();
+
+  // init textures
+  initTextures(gl, 0);
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);

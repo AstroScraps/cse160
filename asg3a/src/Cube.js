@@ -19,18 +19,18 @@ class Cube {
         // top of cube
         // pass the color of a point to a u_fragColor variable
         gl.uniform4f(u_FragColor, rgba[0]*.9, rgba[1]*.9, rgba[2]*.9, rgba[3]);
-        drawTriangle3DUV([0.0, 1.0, 0.0,  1.0, 1.0, 0.0,  0.0, 1.0, 1.0], [0, 1,  1, 1,  0, 1]);
-        drawTriangle3DUV([1.0, 1.0, 0.0,  0.0, 1.0, 1.0,  1.0, 1.0, 1.0], [1, 1,  0, 1,  1, 1]);
-        // left of cube
+        drawTriangle3DUV([0.0, 1.0, 0.0,  1.0, 1.0, 0.0,  0.0, 1.0, 1.0], [0, 1,  1, 1,  0, 0]);
+        drawTriangle3DUV([1.0, 1.0, 0.0,  0.0, 1.0, 1.0,  1.0, 1.0, 1.0], [1, 1,  0, 0,  1, 0]);
+        // "left" of cube
         // pass the color of a point to a u_fragColor variable
         gl.uniform4f(u_FragColor, rgba[0]*.95, rgba[1]*.95, rgba[2]*.95, rgba[3]);
-        drawTriangle3DUV([0.0, 0.0, 0.0,  0.0, 1.0, 0.0,  0.0, 0.0, 1.0], [0, 0,  0, 1,  0, 0]);
-        drawTriangle3DUV([0.0, 1.0, 0.0,  0.0, 1.0, 1.0,  0.0, 0.0, 1.0], [0, 1,  0, 1,  0, 0]);
-        // right of cube
+        drawTriangle3DUV([0.0, 0.0, 0.0,  0.0, 1.0, 0.0,  0.0, 0.0, 1.0], [0, 0,  0, 1,  1, 0]);
+        drawTriangle3DUV([0.0, 1.0, 0.0,  0.0, 1.0, 1.0,  0.0, 0.0, 1.0], [0, 1,  1, 1,  1, 0]);
+        // "right" of cube
         // pass the color of a point to a u_fragColor variable
         gl.uniform4f(u_FragColor, rgba[0]*.85, rgba[1]*.85, rgba[2]*.85, rgba[3]);
-        drawTriangle3DUV([1.0, 0.0, 0.0,  1.0, 1.0, 0.0,  1.0, 0.0, 1.0], [1, 0,  1, 1,  1, 0]);
-        drawTriangle3DUV([1.0, 1.0, 0.0,  1.0, 1.0, 1.0,  1.0, 0.0, 1.0], [1, 1,  1, 1,  1, 0]);
+        drawTriangle3DUV([1.0, 0.0, 0.0,  1.0, 1.0, 0.0,  1.0, 0.0, 1.0], [1, 0,  1, 1,  0, 0]);
+        drawTriangle3DUV([1.0, 1.0, 0.0,  1.0, 1.0, 1.0,  1.0, 0.0, 1.0], [1, 1,  0, 1,  0, 0]);
         // back of cube
         // pass the color of a point to a u_fragColor variable
         gl.uniform4f(u_FragColor, rgba[0]*.75, rgba[1]*.75, rgba[2]*.75, rgba[3]);
