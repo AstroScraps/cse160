@@ -20,10 +20,25 @@ var FSHADER_SOURCE = `
   varying vec2 v_UV;
   uniform vec4 u_FragColor;
   uniform sampler2D u_Sampler0;
+  uniform sampler2D u_Sampler1;
+  uniform sampler2D u_Sampler2;
+  
+  // texture handling
+  uniform int u_whichTexture;
   void main() {
-    gl_FragColor = u_FragColor;
-    gl_FragColor = vec4(v_UV, 1.0, 1.0);
-    gl_FragColor = texture2D(u_Sampler0, v_UV);
+    if (u_whichTexture == -2) {
+      gl_FragColor = u_FragColor; // color
+    } else if (u_whichTexture == -1) {
+      gl_FragColor = vec4(v_UV, 1.0, 1.0); // debug color
+    } else if (u_whichTexture == 0) {
+      gl_FragColor = texture2D(u_Sampler0, v_UV); // texture0
+    } else if (u_whichTexture == 1) {
+      gl_FragColor = texture2D(u_Sampler1, v_UV); // texture1
+    } else if (u_whichTexture == 2) {
+      gl_FragColor = texture2D(u_Sampler2, v_UV); // texture2
+    } else {
+      gl_FragColor = vec4(1, .2, .2, 1); // error color
+    }
   }`
 
 // global variables
@@ -38,6 +53,9 @@ let u_ProjectionMatrix;
 let u_ViewMatrix;
 let u_GlobalRotateMatrix;
 let u_Sampler0;
+let u_Sampler1;
+let u_Sampler2;
+let u_whichTexture;
 
 function setupWebGL() {
   // Retrieve <canvas> element
@@ -117,6 +135,27 @@ function connectVariablesToGLSL() {
     return false;
   }
 
+  // get the storage location of u_Sampler1
+  u_Sampler1 = gl.getUniformLocation(gl.program, 'u_Sampler1');
+  if (!u_Sampler1) {
+    console.log('Failed to get the storage location of u_Sampler1');
+    return false;
+  }
+
+  // get the storage location of u_Sampler2
+  u_Sampler2 = gl.getUniformLocation(gl.program, 'u_Sampler2');
+  if (!u_Sampler2) {
+    console.log('Failed to get the storage location of u_Sampler2');
+    return false;
+  }
+
+  // get the storage location of u_whichTexture
+  u_whichTexture = gl.getUniformLocation(gl.program, 'u_whichTexture');
+  if (!u_whichTexture) {
+    console.log('Failed to get the storage location of u_whichTexture');
+    return false;
+  }
+
   // set initial value for this matrix to identity
   var identityM = new Matrix4();
   gl.uniformMatrix4fv(u_ModelMatrix, false, identityM.elements);
@@ -134,10 +173,6 @@ const POINT = 0;
 const TRIANGLE = 1;
 const CIRCLE = 2;
 
-// globals related to UI elements
-let g_selectedColor = [1.0, 1.0, 1.0, 1.0];
-let g_selectedSize = 5;
-let g_selectedType = POINT;
 // globals for Assignment 2
 // camera move
 let g_globalAngleY = 0;
@@ -175,11 +210,6 @@ function addActionsForHTMLUI() {
     g_lastY = y;
     if (ev.shiftKey) {
       g_shiftKeyActivated = !g_shiftKeyActivated;
-      if (g_shiftKeyActivated) {
-        // shift key
-      } else {
-        // no shift key
-      }
     }
   }
   canvas.onmousemove = function (ev) {
@@ -197,10 +227,23 @@ function addActionsForHTMLUI() {
 }
 
 // initTextures
-function initTextures(gl, n) {
+function initTextures(gl) {
 
+  // inits
   var image0 = new Image(); // create the image object
   if (!image0) {
+    console.log('Failed to create the image object');
+    return false;
+  }
+
+  var image1 = new Image(); // create the image object
+  if (!image1) {
+    console.log('Failed to create the image object');
+    return false;
+  }
+  
+  var image2 = new Image(); // create the image object
+  if (!image2) {
     console.log('Failed to create the image object');
     return false;
   }
@@ -210,13 +253,23 @@ function initTextures(gl, n) {
   // tell the browser to load an image
   image0.src = '../resources/obama.png';
 
+  // register the event handler to be called on loading an image
+  image1.onload = function(){ sendTextureToTEXTURE1(image1); };
+  // tell the browser to load an image
+  image1.src = '../resources/sky.jpg';
+
+  // register the event handler to be called on loading an image
+  image2.onload = function(){ sendTextureToTEXTURE2(image2); };
+  // tell the browser to load an image
+  image2.src = '../resources/soup!.png';
+
   return true;
 }
 
-// sendTextureToGLSL
+// sendTextureToGLSL0
 function sendTextureToTEXTURE0(image) {
-  var texture = gl.createTexture(); // create a texture object
-  if (!texture) {
+  var texture0 = gl.createTexture(); // create a texture object
+  if (!texture0) {
     console.log('Failed to create the texture object');
     return false;
   }
@@ -224,7 +277,7 @@ function sendTextureToTEXTURE0(image) {
   // enable texture unit0
   gl.activeTexture(gl.TEXTURE0);
   // bind the texture object to the target
-  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.bindTexture(gl.TEXTURE_2D, texture0);
 
   // set the texture parameters
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -237,7 +290,55 @@ function sendTextureToTEXTURE0(image) {
   //gl.clear(gl.COLOR_BUFFER_BIT);   // Clear <canvas>
 
   //gl.drawArrays(gl.TRIANGLE_STRIP, 0, n); // Draw the rectangle
-  console.log("finished loadTexture");
+  console.log("finished loadTexture0");
+}
+
+// sendTextureToGLSL1
+function sendTextureToTEXTURE1(image) {
+  var texture1 = gl.createTexture(); // create a texture object
+  if (!texture1) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // flip the image's y axis
+  // enable texture unit1
+  gl.activeTexture(gl.TEXTURE1);
+  // bind the texture object to the target
+  gl.bindTexture(gl.TEXTURE_2D, texture1);
+
+  // set the texture parameters
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  // set the texture image
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+
+  // set the texture unit 1 to the sampler
+  gl.uniform1i(u_Sampler1, 1);
+
+  console.log("finished loadTexture1");
+}
+
+// sendTextureToGLSL2
+function sendTextureToTEXTURE2(image) {
+  var texture2 = gl.createTexture(); // create a texture object
+  if (!texture2) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // flip the image's y axis
+  // enable texture unit1
+  gl.activeTexture(gl.TEXTURE2);
+  // bind the texture object to the target
+  gl.bindTexture(gl.TEXTURE_2D, texture2);
+
+  // set the texture parameters
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  // set the texture image
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+
+  // set the texture unit 1 to the sampler
+  gl.uniform1i(u_Sampler2, 2);
+
+  console.log("finished loadTexture2");
 }
 
 function main() {
@@ -252,7 +353,7 @@ function main() {
   addActionsForHTMLUI();
 
   // init textures
-  initTextures(gl, 0);
+  initTextures(gl);
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -312,6 +413,16 @@ function renderAllShapes() {
   // track performance
   var renderStart = performance.now();
   
+  // pass the projection matrix
+  var projMat = new Matrix4();
+  projMat.setPerspective(90, canvas.width / canvas.height, .1, 100);
+  gl.uniformMatrix4fv(u_ProjectionMatrix, false, projMat.elements);
+
+  // pass the view matrix
+  var viewMat = new Matrix4();
+  viewMat.setLookAt(1, 0, 4,  0, 0, -100,  0, 1, 0); // eye, at, up
+  gl.uniformMatrix4fv(u_ViewMatrix, false, viewMat.elements);
+
   // pass the matrix to u_ModelMatrix attribute
   var globalRotMat = new Matrix4();
   globalRotMat.rotate(g_globalAngleY, 0, 1, 0);
@@ -323,11 +434,37 @@ function renderAllShapes() {
   // clear... other buffer?
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+  // environment setup
+  // skybox
+  var skybox = new Cube();
+  skybox.color = [1, 0, 0, 1];
+  skybox.textureNum = 1;
+  skybox.matrix.scale(50, 50, 50);
+  skybox.matrix.translate(-.5, -.5, -.5);
+  skybox.render();
+
+  // floor
+  var floor = new Cube();
+  floor.color = [1, 0, 0, 1];
+  floor.textureNum = 0;
+  floor.matrix.translate(0, -1, 0);
+  floor.matrix.scale(10, .01, 10);
+  floor.matrix.translate(-.5, 0, -.5);
+  floor.render();
+  // ceiling
+  var ceiling = new Cube();
+  ceiling.color = [1, 0, 0, 1];
+  ceiling.textureNum = 2;
+  ceiling.matrix.translate(0, 24.99, 0);
+  ceiling.matrix.scale(50, .01, 50);
+  ceiling.matrix.translate(-.5, 0, -.5);
+  ceiling.render();
 
   // draw the slug
   // bottom
   var bottomseg = new Cube();
   bottomseg.color = [1.0, 1.0, 0.0, 1.0];
+  bottomseg.textureNum = -2;
   bottomseg.matrix.translate(-.15, -.75, 0.0);
   var bottomCoordinatesMat = new Matrix4(bottomseg.matrix);
   bottomseg.matrix.translate(-.02, 0, 0);
@@ -336,6 +473,7 @@ function renderAllShapes() {
   //neck
   var neck = new Cube();
   neck.color = [1, 1, 0, 1];
+  neck.textureNum = -2;
   neck.matrix.translate(0, -.5, 0, 0);
   neck.matrix.rotate(-5, 1, 0, 0);
   // animation
@@ -348,6 +486,7 @@ function renderAllShapes() {
   // head
   var head = new Cube();
   head.color = [.9, .9, 0, 1];
+  head.textureNum = 0;
   head.matrix = neckCoordinatesMat;
   head.matrix.translate(0, .65, 0);
   var headCoordinatesMat = new Matrix4(head.matrix);
@@ -358,6 +497,7 @@ function renderAllShapes() {
   // nose
   var nose = new Cube();
   nose.color = [.8, .8, 0, 1];
+  nose.textureNum = -2;
   nose.matrix = new Matrix4(headCoordinatesMat);
   nose.matrix.rotate(-15, 1, 0, 0)
   nose.matrix.scale(.05, .05, .1);
@@ -366,6 +506,7 @@ function renderAllShapes() {
   // ear?? 1
   var ear1 = new Cube();
   ear1.color = [.8, .8, 0, 1];
+  ear1.textureNum = -2;
   ear1.matrix = new Matrix4(headCoordinatesMat);
   ear1.matrix.rotate(g_earRotate, 1, 0, 0);
   ear1.matrix.rotate(-30, 1, 0, 0);
@@ -375,6 +516,7 @@ function renderAllShapes() {
   // ear?? 2
   var ear2 = new Cube();
   ear2.color = [.8, .8, 0, 1];
+  ear2.textureNum = -2;
   ear2.matrix = new Matrix4(headCoordinatesMat);
   ear2.matrix.rotate(g_earRotate, 1, 0, 0);
   ear2.matrix.rotate(-30, 1, 0, 0);
@@ -384,6 +526,7 @@ function renderAllShapes() {
   // segment middle
   var middle = new Cube();
   middle.color = [0.9, 0.9, 0, 1];
+  middle.textureNum = -2;
   middle.matrix = bottomCoordinatesMat;
   middle.matrix.rotate(g_middleRotate, 0, 1, 0);
   middle.matrix.scale(.2, .2, .35);
@@ -395,6 +538,7 @@ function renderAllShapes() {
   var tail = new Cube();
   tail.matrix = middleCoordinatesMat;
   tail.color = [1, 1, 0, 1];
+  tail.textureNum = -2;
   tail.matrix.translate(-0.09, -0.1, 1);
   var tailCoordinatesMat = new Matrix4(tail.matrix);
   tail.matrix.scale(1.3, 1.3, 1.3);
@@ -403,6 +547,7 @@ function renderAllShapes() {
   var tailend = new Cube();
   tailend.matrix = tailCoordinatesMat;
   tailend.color = [.85, .85, 0, 1];
+  tailend.textureNum = -2;
   tailend.matrix.translate(0.3, 0.3, 1.1);
   tailend.matrix.scale(0.8, 0.8, 0.3);
   middle.matrix.rotate(-45, 0, 1, 0);
@@ -411,6 +556,7 @@ function renderAllShapes() {
   // hat
   var hat = new Pyramid();
   hat.color = [1, 0, 0, 1];
+  hat.textureNum = -2;
   hat.matrix = new Matrix4(headCoordinatesMat);
   hat.matrix.translate(0, -.15, .15);
   hat.matrix.scale(.3, .3, .3);
