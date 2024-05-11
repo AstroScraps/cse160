@@ -409,6 +409,10 @@ function convertCoordinatesToGL(ev) {
   return ([x, y]);
 }
 
+var g_eye = [0, 0, 3];
+var g_at = [0, 0, -100];
+var g_up = [0, 1, 0];
+
 function renderAllShapes() {
   // track performance
   var renderStart = performance.now();
