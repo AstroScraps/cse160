@@ -430,6 +430,38 @@ function convertCoordinatesToGL(ev) {
   return ([x, y]);
 }
 
+// map function here:
+var g_map = [
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+];
+
+// function to draw the map
+function drawMap() {
+  for (x = 0; x < 8; x++) {
+    for (y = 0; y < 8; y++) {
+      if (g_map[y][x] == 1) {
+        var bar1 = new Cube();
+        bar1.color = [1, 0, 0, 1];
+        bar1.matrix.translate(x-4, -.75, y-4);
+        bar1.render();
+        var bar2 = new Cube();
+        bar2.color = [1, 0, 0, 1];
+        bar2.matrix.translate(x-4, 1, y-4);
+        bar2.render();
+      }
+    }
+  }
+}
+
+// render function (the big one (big))
+
 function renderAllShapes() {
   // track performance
   var renderStart = performance.now();
@@ -456,7 +488,6 @@ function renderAllShapes() {
   gl.clear(gl.COLOR_BUFFER_BIT);
   // clear... other buffer?
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
   // environment setup
   // skybox
   var skybox = new Cube();
@@ -586,6 +617,9 @@ function renderAllShapes() {
   hat.matrix.rotate(g_hatSpin, 0, 1, 0);
   hat.matrix.translate(-.5,0,-.38)
   hat.render();
+
+  // map
+  drawMap();
 
   // track performance (end)
   var duration = performance.now() - renderStart;
