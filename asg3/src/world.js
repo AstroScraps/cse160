@@ -190,18 +190,39 @@ let g_middleAnimation = false;
 let g_earRotate = 0;
 let g_middleRotate = 0;
 let g_hatSpin = 0;
+// camera
+var g_camera = new Camera();
+
+// handle keydown events
+function keydown(ev) {
+  if (ev.key == "w") {
+    g_camera.moveForward();
+    console.log("forward!");
+  }
+  if (ev.key == "s") {
+    g_camera.moveBackward();
+  }
+  if (ev.key == "a") {
+    g_camera.moveLeft();
+  }
+  if (ev.key == "d") {
+    g_camera.moveRight();
+  }
+  if (ev.key == "q") {
+    g_camera.turnLeft();
+  }
+  if (ev.key == "e") {
+    g_camera.turnRight();
+  }
+}
 
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
   // button events
   document.getElementById('animationYellowOnButton').onclick = function () { g_yellowAnimation = true; g_earAnimation = true; g_middleAnimation = true; };
   document.getElementById('animationYellowOffButton').onclick = function () { g_yellowAnimation = false; g_earAnimation = false; g_middleAnimation = false; };
-
-  // 3D slider events
-  document.getElementById('angleSlide').addEventListener('mousemove', function () { g_globalAngleY = this.value; renderAllShapes(); });
-  document.getElementById('neckSlide').addEventListener('mousemove', function () { g_yellowAngle = this.value; renderAllShapes(); });
-  document.getElementById('bodySlide').addEventListener('mousemove', function () { g_middleRotate = this.value; renderAllShapes(); });
-
+  // movement events
+  document.addEventListener('keydown', keydown)
   // credit for camera turn from 'Stanley the Flying Elephant - Nicholas Eastmond' (from the hall of fame)
 
   canvas.onmousedown = (ev) => {
@@ -409,22 +430,20 @@ function convertCoordinatesToGL(ev) {
   return ([x, y]);
 }
 
-var g_eye = [0, 0, 3];
-var g_at = [0, 0, -100];
-var g_up = [0, 1, 0];
-
 function renderAllShapes() {
   // track performance
   var renderStart = performance.now();
   
   // pass the projection matrix
   var projMat = new Matrix4();
-  projMat.setPerspective(90, canvas.width / canvas.height, .1, 100);
+  projMat.setPerspective(50, canvas.width / canvas.height, 1, 100);
   gl.uniformMatrix4fv(u_ProjectionMatrix, false, projMat.elements);
 
   // pass the view matrix
   var viewMat = new Matrix4();
-  viewMat.setLookAt(1, 0, 4,  0, 0, -100,  0, 1, 0); // eye, at, up
+  viewMat.setLookAt(g_camera.eye.elements[0], g_camera.eye.elements[1], g_camera.eye.elements[2],
+    g_camera.at.elements[0], g_camera.at.elements[1], g_camera.at.elements[2],
+    g_camera.up.elements[0], g_camera.up.elements[1], g_camera.up.elements[2]);
   gl.uniformMatrix4fv(u_ViewMatrix, false, viewMat.elements);
 
   // pass the matrix to u_ModelMatrix attribute

@@ -1,14 +1,17 @@
 class Camera {
     constructor() {
         this.eye = new Vector3([0, 0, 3]);
-        this.at = new Vector3([0, 0, -100]);
+        this.at = new Vector3([0, 0, -2000]);
         this.up = new Vector3([0, 1, 0]);
     }
     // MOVEMENT
     // forward
     moveForward() {
+        // set d
+        let d = new Vector3();
         // d = at - eye
-        let d = new Vector3(this.at).sub(this.eye);
+        d.set(this.at);
+        d.sub(this.eye);
         // d = d.normalize()
         d = d.normalize();
         // eye = eye + d
@@ -20,7 +23,9 @@ class Camera {
     // same as forward but subtracting d
     moveBackward() {
         // d = at - eye
-        let d = new Vector3(this.at).sub(this.eye);
+        let d = new Vector3();
+        d.set(this.at);
+        d.sub(this.eye);
         // d = d.normalize()
         d = d.normalize();
         // eye = eye - d
@@ -31,11 +36,13 @@ class Camera {
     // left
     moveLeft() {
         // d = at - eye
-        let d = new Vector3(this.at).sub(this.eye);
+        let d = new Vector3();
+        d.set(this.at);
+        d.sub(this.eye);
         // d = d.normalize()
         d = d.normalize();
         // d = d.cross(up)
-        n = Vector3.cross(this.up, d);
+        let n = Vector3.cross(this.up, d);
         // eye = eye + n
         this.eye.add(n);
         // at = at + n
@@ -45,11 +52,13 @@ class Camera {
     // same as left but swap
     moveRight() {
         // d = at - eye
-        let d = new Vector3(this.at).sub(this.eye);
+        let d = new Vector3();
+        d.set(this.at);
+        d.sub(this.eye);
         // d = d.normalize()
         d = d.normalize();
         // d = d.cross(up)
-        n = Vector3.cross(d, this.up);
+        let n = Vector3.cross(d, this.up);
         // eye = eye + n
         this.eye.add(n);
         // at = at + n
@@ -59,7 +68,9 @@ class Camera {
     // left
     turnLeft() {
         // d = at - eye
-        let atp = new Vector3(this.at).sub(this.eye);
+        let atp = new Vector3();
+        atp.set(this.at);
+        atp.sub(this.eye);
         // plug into the formula for r
         let r = Math.sqrt(atp.elements[0] * atp.elements[0] + atp.elements[2] * atp.elements[2]);
         // plug into the formula for theta
@@ -76,7 +87,9 @@ class Camera {
     // right
     turnRight() {
         // d = at - eye
-        let atp = new Vector3(this.at).sub(this.eye);
+        let atp = new Vector3();
+        atp.set(this.at);
+        atp.sub(this.eye);
         // plug into the formula for r
         let r = Math.sqrt(atp.elements[0] * atp.elements[0] + atp.elements[2] * atp.elements[2]);
         // plug into the formula for theta
