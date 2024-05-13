@@ -505,6 +505,15 @@ function renderAllShapes() {
   floor.matrix.scale(10, .01, 10);
   floor.matrix.translate(-.5, 0, -.5);
   floor.render();
+
+    // floor2
+    var floor2 = new Cube();
+    floor2.color = [1, 0, 0, 1];
+    floor2.textureNum = 0;
+    floor2.matrix.translate(0, 2.5, 0);
+    floor2.matrix.scale(10, .01, 10);
+    floor2.matrix.translate(-.5, 0, -.5);
+    floor2.render();
   // ceiling
   var ceiling = new Cube();
   ceiling.color = [1, 0, 0, 1];
