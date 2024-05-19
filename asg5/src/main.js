@@ -16,13 +16,34 @@ function init() {
     // make canvas reachable
     const canvas = document.querySelector('#c');
     // lights
-    const color = 0xFFFFFF;
-    const intensity = 1;
-    const light = new THREE.DirectionalLight(color, intensity);
-    light.position.set(7, 6, 0);
-    light.target.position.set(-5, 0, 0);
-    scene.add(light);
-    scene.add(light.target);
+    // directional light
+    const dcolor = 0xFFFFFF;
+    const dintensity = 1;
+    const dlight = new THREE.DirectionalLight(dcolor, dintensity);
+    dlight.position.set(10, 9, -5);
+    dlight.target.position.set(-5, 0, 0);
+    
+    const dhelper = new THREE.DirectionalLightHelper(dlight);
+    scene.add(dhelper);
+    scene.add(dlight);
+    scene.add(dlight.target);
+
+    // ambient light
+    const acolor = 0xFFFFFF;
+    const aintensity = 0.3;
+    const alight = new THREE.AmbientLight(acolor, aintensity);
+    scene.add(alight);
+
+    // spot light
+    const scolor = 0xFFFFFF;
+    const sintensity = 0.5;
+    const slight = new THREE.SpotLight(scolor, sintensity);
+    slight.position.set( -10, 5, 10 );
+
+    const shelper = new THREE.SpotLightHelper(slight);
+    scene.add(shelper);
+    scene.add(slight);
+
     // camera
     const fov = 45;
     const aspect = 2;
@@ -46,14 +67,24 @@ function init() {
     // orbit controls
     const controls = new OrbitControls(camera, canvas);
     controls.target.set(0, 5, 0);
+    // control keys
+    controls.keys = {
+        LEFT: 'KeyA',
+        UP: 'KeyW',
+        RIGHT: 'KeyD',
+        BOTTOM: 'KeyS'
+    };
+
+    controls.listenToKeyEvents(window);
+    
     controls.update();
+
 
     // STUFF
     // floor
     const planeSize = 40;
-    
     const loader = new THREE.TextureLoader();
-    const floorTexture = loader.load('example-textures/checker.png');
+    const floorTexture = loader.load('example-textures/hardwood2_diffuse.jpg');
     floorTexture.wrapS = THREE.RepeatWrapping;
     floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.magFilter = THREE.NearestFilter;
