@@ -3,7 +3,9 @@
 var VSHADER_SOURCE = `
   attribute vec4 a_Position;
   attribute vec2 a_UV;
+  attribute vec3 a_Normal;
   varying vec2 v_UV;
+  varying vec3 v_Normal;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_GlobalRotateMatrix;
   uniform mat4 u_ViewMatrix;
@@ -12,12 +14,14 @@ var VSHADER_SOURCE = `
   {
     gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
     v_UV = a_UV;
+    v_Normal = a_Normal;
   }`
 
 // Fragment shader program
 var FSHADER_SOURCE = `
   precision mediump float;
   varying vec2 v_UV;
+  varying vec3 v_Normal;
   uniform vec4 u_FragColor;
   uniform sampler2D u_Sampler0;
   uniform sampler2D u_Sampler1;
@@ -26,7 +30,9 @@ var FSHADER_SOURCE = `
   // texture handling
   uniform int u_whichTexture;
   void main() {
-    if (u_whichTexture == -2) {
+    if (u_whichTexture == -3) {
+      gl_FragColor = vec4((v_Normal + 1.0) / 2.0, 1.0); // normal
+    }  else if (u_whichTexture == -2) {
       gl_FragColor = u_FragColor; // color
     } else if (u_whichTexture == -1) {
       gl_FragColor = vec4(v_UV, 1.0, 1.0); // debug color
@@ -90,6 +96,13 @@ function connectVariablesToGLSL() {
   a_UV = gl.getAttribLocation(gl.program, 'a_UV');
   if (a_UV < 0) {
     console.log('Failed to get the storage location of a_UV');
+    return;
+  }
+
+  // Get the storage location of a_Normal
+  a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
+  if (a_Normal < 0) {
+    console.log('Failed to get the storage location of a_Normal');
     return;
   }
 
@@ -190,6 +203,7 @@ let g_middleAnimation = false;
 let g_earRotate = 0;
 let g_middleRotate = 0;
 let g_hatSpin = 0;
+let g_normalOn = false;
 // camera
 var g_camera = new Camera();
 
@@ -219,6 +233,8 @@ function keydown(ev) {
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
   // button events
+  document.getElementById('nOn').onclick = function () { g_normalOn = true; };
+  document.getElementById('nOff').onclick = function () { g_normalOn = false; };
   document.getElementById('animationYellowOnButton').onclick = function () { g_yellowAnimation = true; g_earAnimation = true; g_middleAnimation = true; };
   document.getElementById('animationYellowOffButton').onclick = function () { g_yellowAnimation = false; g_earAnimation = false; g_middleAnimation = false; };
   // movement events
@@ -491,9 +507,9 @@ function renderAllShapes() {
   // environment setup
   // skybox
   var skybox = new Cube();
-  skybox.color = [1, 0, 0, 1];
-  skybox.textureNum = 1;
-  skybox.matrix.scale(50, 50, 50);
+  skybox.color = [0.8, 0.8, 0.8, 1];
+  if (g_normalOn) skybox.textureNum = -3;
+  skybox.matrix.scale(-50, -50, -50);
   skybox.matrix.translate(-.5, -.5, -.5);
   skybox.render();
 
@@ -504,16 +520,16 @@ function renderAllShapes() {
   floor.matrix.translate(0, -1, 0);
   floor.matrix.scale(10, .01, 10);
   floor.matrix.translate(-.5, 0, -.5);
-  floor.render();
+  //floor.render();
 
-    // floor2
-    var floor2 = new Cube();
-    floor2.color = [1, 0, 0, 1];
-    floor2.textureNum = 0;
-    floor2.matrix.translate(0, 2.5, 0);
-    floor2.matrix.scale(10, .01, 10);
-    floor2.matrix.translate(-.5, 0, -.5);
-    floor2.render();
+  // floor2
+  var floor2 = new Cube();
+  floor2.color = [1, 0, 0, 1];
+  floor2.textureNum = 0;
+  floor2.matrix.translate(0, 2.5, 0);
+  floor2.matrix.scale(10, .01, 10);
+  floor2.matrix.translate(-.5, 0, -.5);
+  //floor2.render();
   // ceiling
   var ceiling = new Cube();
   ceiling.color = [1, 0, 0, 1];
@@ -521,7 +537,7 @@ function renderAllShapes() {
   ceiling.matrix.translate(0, 24.99, 0);
   ceiling.matrix.scale(50, .01, 50);
   ceiling.matrix.translate(-.5, 0, -.5);
-  ceiling.render();
+  //ceiling.render();
 
   // draw the slug
   // bottom
@@ -628,7 +644,7 @@ function renderAllShapes() {
   hat.render();
 
   // map
-  drawMap();
+  //drawMap();
 
   // track performance (end)
   var duration = performance.now() - renderStart;
