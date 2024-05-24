@@ -6,6 +6,7 @@ var VSHADER_SOURCE = `
   attribute vec3 a_Normal;
   varying vec2 v_UV;
   varying vec3 v_Normal;
+  varying vec4 v_VertPos;
   uniform mat4 u_ModelMatrix;
   uniform mat4 u_GlobalRotateMatrix;
   uniform mat4 u_ViewMatrix;
@@ -15,6 +16,7 @@ var VSHADER_SOURCE = `
     gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
     v_UV = a_UV;
     v_Normal = a_Normal;
+    v_VertPos = u_ModelMatrix * a_Position; // lighting stuff
   }`
 
 // Fragment shader program
@@ -23,6 +25,10 @@ var FSHADER_SOURCE = `
   varying vec2 v_UV;
   varying vec3 v_Normal;
   uniform vec4 u_FragColor;
+  uniform vec3 u_lightPos;
+  varying vec4 v_VertPos;
+
+  // samplers
   uniform sampler2D u_Sampler0;
   uniform sampler2D u_Sampler1;
   uniform sampler2D u_Sampler2;
@@ -45,6 +51,15 @@ var FSHADER_SOURCE = `
     } else {
       gl_FragColor = vec4(1, .2, .2, 1); // error color
     }
+
+    // lighting
+    vec3 lightVector = vec3(v_VertPos) - u_lightPos;
+    float r = length(lightVector);
+    if (r < 1.0) {
+      gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    } else if (r < 2.0) {
+      gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    }
   }`
 
 // global variables
@@ -53,6 +68,7 @@ let gl;
 let a_Position;
 let a_UV;
 let u_FragColor;
+let u_lightPos;
 let u_Size;
 let u_ModelMatrix;
 let u_ProjectionMatrix;
@@ -110,6 +126,13 @@ function connectVariablesToGLSL() {
   u_FragColor = gl.getUniformLocation(gl.program, 'u_FragColor');
   if (!u_FragColor) {
     console.log('Failed to get the storage location of u_FragColor');
+    return;
+  }
+
+  // get the storage location of u_lightPos
+  u_lightPos = gl.getUniformLocation(gl.program, 'u_lightPos');
+  if (!u_lightPos) {
+    console.log('Failed to get the storage location of u_lightPos');
     return;
   }
 
@@ -181,30 +204,6 @@ function connectVariablesToGLSL() {
   gl.uniformMatrix4fv(u_ViewMatrix, false, projectionMatrix.elements);
 }
 
-// consts
-const TRIANGLE = 1;
-
-// globals for Assignment 2
-// camera move
-let g_globalAngleY = 0;
-let g_globalAngleX = 0;
-let g_shiftKeyActivated = true;
-let g_lastX = null;
-let g_lastY = null;
-let sliderX;
-let sliderY;
-// limb stuff
-let g_yellowAngle = 0;
-let g_yellowAnimation = false;
-let g_earAnimation = false;
-let g_middleAnimation = false;
-let g_earRotate = 0;
-let g_middleRotate = 0;
-let g_hatSpin = 0;
-let g_normalOn = false;
-// camera
-var g_camera = new Camera();
-
 // handle keydown events
 function keydown(ev) {
   if (ev.key == "w") {
@@ -228,6 +227,28 @@ function keydown(ev) {
   }
 }
 
+// globals for Assignment 2
+// camera move
+let g_globalAngleY = 0;
+let g_globalAngleX = 0;
+let g_shiftKeyActivated = true;
+let g_lastX = null;
+let g_lastY = null;
+let sliderX;
+let sliderY;
+// limb stuff
+let g_yellowAngle = 0;
+let g_yellowAnimation = false;
+let g_earAnimation = false;
+let g_middleAnimation = false;
+let g_earRotate = 0;
+let g_middleRotate = 0;
+let g_hatSpin = 0;
+let g_normalOn = false;
+let g_lightPos = [0, 1, -2];
+// camera
+var g_camera = new Camera();
+
 // set up actions for the HTML UI elements
 function addActionsForHTMLUI() {
   // button events
@@ -235,6 +256,27 @@ function addActionsForHTMLUI() {
   document.getElementById('nOff').onclick = function () { g_normalOn = false; };
   document.getElementById('animationYellowOnButton').onclick = function () { g_yellowAnimation = true; g_earAnimation = true; g_middleAnimation = true; };
   document.getElementById('animationYellowOffButton').onclick = function () { g_yellowAnimation = false; g_earAnimation = false; g_middleAnimation = false; };
+
+  // slider events
+  document.getElementById('lightSliderX').addEventListener('mousemove', function (ev) {
+    if (ev.buttons == 1) {
+      g_lightPos[0] = this.value / 100;
+      renderAllShapes();
+    }
+  });
+  document.getElementById('lightSliderY').addEventListener('mousemove', function (ev) {
+    if (ev.buttons == 1) {
+      g_lightPos[1] = this.value / 100;
+      renderAllShapes();
+    }
+  });
+  document.getElementById('lightSliderZ').addEventListener('mousemove', function (ev) {
+    if (ev.buttons == 1) {
+      g_lightPos[2] = this.value / 100;
+      renderAllShapes();
+    }
+  });
+
   // movement events
   document.addEventListener('keydown', keydown)
   // credit for camera turn from 'Stanley the Flying Elephant - Nicholas Eastmond' (from the hall of fame)
@@ -430,6 +472,8 @@ function updateAnimationAngles() {
   if (!g_shiftKeyActivated) {
     g_hatSpin = 90 * Math.sin(g_seconds);
   }
+  // autoLight
+  g_lightPos[0] = Math.sin(g_seconds);
 }
 
 // canvas stuff
@@ -507,9 +551,23 @@ function renderAllShapes() {
   var skybox = new Cube();
   skybox.color = [0.8, 0.8, 0.8, 1];
   if (g_normalOn) skybox.textureNum = -3;
-  skybox.matrix.scale(-50, -50, -50);
+  skybox.matrix.scale(-5, -5, -5);
   skybox.matrix.translate(-.5, -.5, -.5);
   skybox.render();
+
+  // light
+
+  // pass light to shader
+  gl.uniform3f(u_lightPos, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
+
+  // light obj
+  var light = new Cube();
+  light.color = [2, 2, 0, 1];
+  light.textureNum = -2;
+  light.matrix.translate(g_lightPos[0], g_lightPos[1], g_lightPos[2]);
+  light.matrix.scale(.1, .1, .1);
+  light.matrix.translate(-.5, -.5, -.5);
+  light.render();
 
   // floor
   var floor = new Cube();
@@ -542,7 +600,7 @@ function renderAllShapes() {
   sphere.color = [1.0, 1.0, 0.0, 1.0];
   sphere.textureNum = 2;
   if(g_normalOn) sphere.textureNum = -3;
-  sphere.render();
+  //sphere.render();
 
   // draw the slug
   // bottom
