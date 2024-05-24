@@ -182,9 +182,7 @@ function connectVariablesToGLSL() {
 }
 
 // consts
-const POINT = 0;
 const TRIANGLE = 1;
-const CIRCLE = 2;
 
 // globals for Assignment 2
 // camera move
@@ -538,6 +536,13 @@ function renderAllShapes() {
   ceiling.matrix.scale(50, .01, 50);
   ceiling.matrix.translate(-.5, 0, -.5);
   //ceiling.render();
+
+  // sphere
+  var sphere = new Sphere();
+  sphere.color = [1.0, 1.0, 0.0, 1.0];
+  sphere.textureNum = 2;
+  if(g_normalOn) sphere.textureNum = -3;
+  sphere.render();
 
   // draw the slug
   // bottom
