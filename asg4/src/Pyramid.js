@@ -3,9 +3,16 @@ class Pyramid {
         this.type='pyramid';
         this.color=[1.0, 1.0, 1.0, 1.0];
         this.matrix = new Matrix4();
+        this.normalMatrix = new Matrix4();
+        this.textureNum = 0;
     }
 
     render() {
+        if(g_normalOn) this.textureNum = -3;
+
+        // fix anim
+        this.normalMatrix.setInverseOf(this.matrix).transpose();
+
         var rgba = this.color;
 
         //pass matrix to u_ModelMatrix attribute

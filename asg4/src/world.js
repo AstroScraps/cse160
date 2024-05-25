@@ -8,6 +8,7 @@ var VSHADER_SOURCE = `
   varying vec3 v_Normal;
   varying vec4 v_VertPos;
   uniform mat4 u_ModelMatrix;
+  uniform mat4 u_NormalMatrix;
   uniform mat4 u_GlobalRotateMatrix;
   uniform mat4 u_ViewMatrix;
   uniform mat4 u_ProjectionMatrix;
@@ -15,7 +16,7 @@ var VSHADER_SOURCE = `
   {
     gl_Position = u_ProjectionMatrix * u_ViewMatrix * u_GlobalRotateMatrix * u_ModelMatrix * a_Position;
     v_UV = a_UV;
-    v_Normal = a_Normal;
+    v_Normal = normalize(vec3(u_NormalMatrix * vec4(a_Normal, 1)));
     v_VertPos = u_ModelMatrix * a_Position; // lighting stuff
   }`
 
@@ -25,8 +26,11 @@ var FSHADER_SOURCE = `
   varying vec2 v_UV;
   varying vec3 v_Normal;
   uniform vec4 u_FragColor;
+  uniform vec3 u_lightColor; // change this to vec4
   uniform vec3 u_lightPos;
+  uniform vec3 u_cameraPos;
   varying vec4 v_VertPos;
+  uniform bool u_lightToggle;
 
   // samplers
   uniform sampler2D u_Sampler0;
@@ -53,12 +57,36 @@ var FSHADER_SOURCE = `
     }
 
     // lighting
-    vec3 lightVector = vec3(v_VertPos) - u_lightPos;
+    vec3 lightVector = u_lightPos - vec3(v_VertPos);
     float r = length(lightVector);
-    if (r < 1.0) {
-      gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-    } else if (r < 2.0) {
-      gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+    // gl_FragColor = vec4(vec3(gl_FragColor) / (r * r), 1);
+
+    // N dot L
+    vec3 L = normalize(lightVector);
+    vec3 N = normalize(v_Normal);
+    float nDotL = max(dot(N, L), 0.0);
+
+    // reflection
+    vec3 R = reflect(-L, N);
+    
+    // eye
+    vec3 E = normalize(u_cameraPos - vec3(v_VertPos));
+
+    // specular
+    float specular = pow(max(dot(R, E), 0.0), 50.0);
+
+    // diffuse and ambient
+    vec3 diffuse = vec3(gl_FragColor) * nDotL * 0.7 * u_lightColor;
+    vec3 ambient = vec3(gl_FragColor) * 0.5;
+
+    if (u_lightToggle == true) {
+      if(u_whichTexture != 1) {
+        gl_FragColor = vec4(specular + diffuse + ambient, 1.0);
+      } else {
+        gl_FragColor = vec4(diffuse + ambient, 1.0);
+      }
+    } else {
+      gl_FragColor = vec4(ambient, 1.0);
     }
   }`
 
@@ -68,7 +96,9 @@ let gl;
 let a_Position;
 let a_UV;
 let u_FragColor;
+let u_lightColor;
 let u_lightPos;
+let u_lightToggle;
 let u_Size;
 let u_ModelMatrix;
 let u_ProjectionMatrix;
@@ -122,10 +152,24 @@ function connectVariablesToGLSL() {
     return;
   }
 
+  // Get the storage location of u_cameraPos
+  u_cameraPos = gl.getUniformLocation(gl.program, 'u_cameraPos');
+  if (!u_cameraPos) {
+    console.log('Failed to get the storage location of u_cameraPos');
+    return;
+  }
+
   // Get the storage location of u_FragColor
   u_FragColor = gl.getUniformLocation(gl.program, 'u_FragColor');
   if (!u_FragColor) {
     console.log('Failed to get the storage location of u_FragColor');
+    return;
+  }
+
+  // Get the storage location of u_lightColor
+  u_lightColor = gl.getUniformLocation(gl.program, 'u_lightColor');
+  if (!u_lightColor) {
+    console.log('Failed to get the storage location of u_lightColor');
     return;
   }
 
@@ -136,10 +180,24 @@ function connectVariablesToGLSL() {
     return;
   }
 
+  // get the storage location of u_lightToggle
+  u_lightToggle = gl.getUniformLocation(gl.program, 'u_lightToggle');
+  if (!u_lightToggle) {
+    console.log('Failed to get the storage location of u_lightToggle');
+    return;
+  }
+
   // get the storage location of u_ModelMatrix
   u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
   if (!u_ModelMatrix) {
     console.log('Failed to get the sotrage location of u_ModelMatrix');
+    return;
+  }
+
+  // get the storage location of u_NormalMatrix
+  u_NormalMatrix = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
+  if (!u_NormalMatrix) {
+    console.log('Failed to get the storage location of u_NormalMatrix');
     return;
   }
 
@@ -236,7 +294,8 @@ let g_lastX = null;
 let g_lastY = null;
 let sliderX;
 let sliderY;
-// limb stuff
+// other stuff
+// limbs
 let g_yellowAngle = 0;
 let g_yellowAnimation = false;
 let g_earAnimation = false;
@@ -244,8 +303,11 @@ let g_middleAnimation = false;
 let g_earRotate = 0;
 let g_middleRotate = 0;
 let g_hatSpin = 0;
+// lighting
 let g_normalOn = false;
 let g_lightPos = [0, 1, -2];
+let g_lightToggle = true;
+let g_lightColor = [1, 1, 1, 1];
 // camera
 var g_camera = new Camera();
 
@@ -256,6 +318,7 @@ function addActionsForHTMLUI() {
   document.getElementById('nOff').onclick = function () { g_normalOn = false; };
   document.getElementById('animationYellowOnButton').onclick = function () { g_yellowAnimation = true; g_earAnimation = true; g_middleAnimation = true; };
   document.getElementById('animationYellowOffButton').onclick = function () { g_yellowAnimation = false; g_earAnimation = false; g_middleAnimation = false; };
+  document.getElementById('lightToggle').onclick = function () { g_lightToggle = !g_lightToggle; };
 
   // slider events
   document.getElementById('lightSliderX').addEventListener('mousemove', function (ev) {
@@ -276,6 +339,11 @@ function addActionsForHTMLUI() {
       renderAllShapes();
     }
   });
+  
+  // light color sliders
+  document.getElementById('lightColorSliderR').addEventListener('mousemove', function (ev) { g_lightColor[0] = this.value });
+  document.getElementById('lightColorSliderG').addEventListener('mousemove', function (ev) { g_lightColor[1] = this.value });
+  document.getElementById('lightColorSliderB').addEventListener('mousemove', function (ev) { g_lightColor[2] = this.value });
 
   // movement events
   document.addEventListener('keydown', keydown)
@@ -473,7 +541,9 @@ function updateAnimationAngles() {
     g_hatSpin = 90 * Math.sin(g_seconds);
   }
   // autoLight
+  if( g_yellowAnimation == true) {
   g_lightPos[0] = Math.sin(g_seconds);
+  }
 }
 
 // canvas stuff
@@ -546,10 +616,12 @@ function renderAllShapes() {
   gl.clear(gl.COLOR_BUFFER_BIT);
   // clear... other buffer?
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
   // environment setup
   // skybox
   var skybox = new Cube();
   skybox.color = [0.8, 0.8, 0.8, 1];
+  skybox.textureNum = 1;
   if (g_normalOn) skybox.textureNum = -3;
   skybox.matrix.scale(-5, -5, -5);
   skybox.matrix.translate(-.5, -.5, -.5);
@@ -560,12 +632,21 @@ function renderAllShapes() {
   // pass light to shader
   gl.uniform3f(u_lightPos, g_lightPos[0], g_lightPos[1], g_lightPos[2]);
 
+  // pass camera to shader
+  gl.uniform3f(u_cameraPos, g_camera.eye.elements[0], g_camera.eye.elements[1], g_camera.eye.elements[2]);
+
+  // pass light toggle to shader
+  gl.uniform1i(u_lightToggle, g_lightToggle);
+
+  // pass light color to shader
+  gl.uniform3f(u_lightColor, g_lightColor[0], g_lightColor[1], g_lightColor[2]);
+
   // light obj
   var light = new Cube();
   light.color = [2, 2, 0, 1];
   light.textureNum = -2;
   light.matrix.translate(g_lightPos[0], g_lightPos[1], g_lightPos[2]);
-  light.matrix.scale(.1, .1, .1);
+  light.matrix.scale(-.1, -.1, -.1);
   light.matrix.translate(-.5, -.5, -.5);
   light.render();
 
@@ -600,7 +681,9 @@ function renderAllShapes() {
   sphere.color = [1.0, 1.0, 0.0, 1.0];
   sphere.textureNum = 2;
   if(g_normalOn) sphere.textureNum = -3;
-  //sphere.render();
+  sphere.matrix.translate(1, 0, -0.5);
+  sphere.matrix.scale(.5, .5, .5);
+  sphere.render();
 
   // draw the slug
   // bottom
@@ -704,7 +787,7 @@ function renderAllShapes() {
   hat.matrix.scale(.3, .3, .3);
   hat.matrix.rotate(g_hatSpin, 0, 1, 0);
   hat.matrix.translate(-.5,0,-.38)
-  hat.render();
+  //hat.render();
 
   // map
   //drawMap();

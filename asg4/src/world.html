@@ -12,7 +12,7 @@
     </canvas>
     <!--fps-->
     <p id="fps">hallo</p>
-    <!--buttons to control lighting position-->
+    <!--sliders to control lighting position-->
     <p>
     Light X
     <input type="range" id="lightSliderX" min="-250" max="250" value="0" class="slider">
@@ -20,6 +20,17 @@
     <input type="range" id="lightSliderY" min="-250" max="250" value="0" class="slider">
     Light Z
     <input type="range" id="lightSliderZ" min="-250" max="250" value="0" class="slider">
+    <!--sliders to control light color-->
+    <p>
+    Light R
+    <input type="range" id="lightColorSliderR" min="0" max="1" step="0.01" value="1" class="slider">
+    Light G
+    <input type="range" id="lightColorSliderG" min="0" max="1" step="0.01" value="1" class="slider">
+    Light B
+    <input type="range" id="lightColorSliderB" min="0" max="1" step="0.01" value="1" class="slider">
+    <!--light switch-->
+    <p>
+    <button type="button" id="lightToggle">Light Switch</button>
     <!--buttons to toggle normals-->
     <p>
     <button type="button" id="nOn">Normals ON</button>
