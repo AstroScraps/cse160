@@ -28,6 +28,26 @@ function init() {
     scene.add(dhelper);
     scene.add(dlight.target);
     scene.add(dlight);
+
+    // directional light 2
+    const d2color = 0xFFFFFF;
+    const d2intensity = 3;
+    const d2light = new THREE.SpotLight(d2color, d2intensity);
+    d2light.position.set(0, 12, 0);
+    d2light.target.position.set(0, 20, 0);
+    
+    scene.add(d2light.target);
+    scene.add(d2light);
+
+    // directional light 3
+    const d3color = 0xFFFFFF;
+    const d3intensity = 0.1;
+    const d3light = new THREE.SpotLight(d3color, d3intensity);
+    d3light.position.set(0, 30, 0);
+    d3light.target.position.set(0, 5, 0);
+    
+    scene.add(d3light.target);
+    scene.add(d3light);
     
     // ambient light
     const acolor = 0xFFFFFF;
@@ -423,6 +443,18 @@ function init() {
             pig.position.set(10.5, 0, -10);
             pig.rotation.x = 4.75;
             pig.rotation.z = 7
+		    scene.add( pig );
+		} );
+    } );
+    mtlLoader.load( 'example-textures/pig/Blank.mtl', ( mtl ) => {
+        mtl.preload();
+		const objLoader = new OBJLoader();
+		objLoader.setMaterials( mtl );
+		objLoader.load('example-textures/pig/16433_Pig.obj', ( pig ) => {
+            pig.scale.set(2,2,2);
+            pig.position.set(2.7, 12, 0);
+            pig.rotation.x = 8;
+            pig.rotation.z = 3
 		    scene.add( pig );
 		} );
     } );
